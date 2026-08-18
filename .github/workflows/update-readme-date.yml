@@ -1,0 +1,39 @@
+name: Update README date
+
+on:
+  schedule:
+    # 19:30 UTC = 5:30am Sydney (AEST). Becomes 6:30am during AEDT,
+    # but the date written is computed in Sydney time either way, so it stays correct.
+    - cron: '30 19 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-date:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update the date line
+        run: |
+          STAMP="Last updated: $(TZ=Australia/Sydney date '+%A, %-d %B %Y')"
+          if grep -q '^Last updated: ' README.md; then
+            sed -i "s/^Last updated: .*/$STAMP/" README.md
+          else
+            printf '\n%s\n' "$STAMP" >> README.md
+          fi
+          echo "$STAMP"
+
+      - name: Commit and push if changed
+        run: |
+          if git diff --quiet -- README.md; then
+            echo "Already up to date, nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "Update date to $(TZ=Australia/Sydney date '+%A, %-d %B %Y')"
+          git push
